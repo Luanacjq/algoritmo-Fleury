@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Algoritmo de Fleury · Tour de Euler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="modo-auto">
+  <!-- Fundo animado -->
+  <div class="fundo" aria-hidden="true">
+    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+  </div>
+
+  <header class="topo">
+    <span class="selo">Trabalho 03 · Teoria dos Grafos</span>
+    <h1>Algoritmo de <span class="grad">Fleury</span></h1>
+    <p>Construção passo a passo do <strong>Tour de Euler</strong>: percorrer todas as arestas
+      exatamente uma vez, sem nunca "queimar uma ponte" enquanto houver outra saída.</p>
+  </header>
+
+  <main class="layout">
+    <!-- ===== Grafo + controles ===== -->
+    <section class="card card-grafo">
+      <div class="barra-topo">
+        <div class="abas" role="tablist">
+          <span class="aba-indicador"></span>
+          <button class="aba ativa" data-modo="auto" role="tab">▶ Animação</button>
+          <button class="aba" data-modo="desafio" role="tab">🎯 Modo desafio</button>
+        </div>
+        <div class="inicio">
+          <span>Vértice inicial</span>
+          <div id="seletor-inicio" class="chips-inicio"></div>
+        </div>
+      </div>
+
+      <div class="palco">
+        <svg id="grafo" viewBox="0 0 620 450" role="img" aria-label="Grafo do trabalho">
+          <defs>
+            <linearGradient id="grad-vertice" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8b5cf6" />
+              <stop offset="100%" stop-color="#22d3ee" />
+            </linearGradient>
+          </defs>
+          <g id="camada-arestas"></g>
+          <g id="camada-rotulos"></g>
+          <g id="camada-vertices"></g>
+          <g id="viajante">
+            <circle r="16" class="viajante-glow" />
+            <circle r="7" class="viajante-nucleo" />
+          </g>
+        </svg>
+
+        <div id="banner-fim" class="banner-fim">
+          <div class="banner-icone">✓</div>
+          <div>
+            <strong id="banner-titulo">Circuito de Euler encontrado!</strong>
+            <span id="banner-texto"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="progresso"><div id="barra-progresso"></div></div>
+
+      <!-- Controles do modo animação -->
+      <div id="controles-auto" class="controles">
+        <div class="grupo-botoes">
+          <button id="btn-reiniciar" class="btn" title="Reiniciar (R)">⟲</button>
+          <button id="btn-voltar" class="btn" title="Passo anterior (←)">⏮</button>
+          <button id="btn-play" class="btn btn-principal" title="Tocar / pausar (Espaço)">▶</button>
+          <button id="btn-proximo" class="btn" title="Próximo passo (→)">⏭</button>
+        </div>
+        <label class="velocidade">
+          <span>Velocidade <b id="vel-valor">1.0×</b></span>
+          <input id="vel" type="range" min="0.5" max="3" step="0.25" value="1" />
+        </label>
+      </div>
+
+      <!-- Controles do modo desafio -->
+      <div id="controles-desafio" class="controles oculto">
+        <div class="grupo-botoes">
+          <button id="btn-des-reiniciar" class="btn" title="Reiniciar">⟲</button>
+          <button id="btn-desfazer" class="btn" title="Desfazer">↶</button>
+          <button id="btn-dica" class="btn btn-principal btn-texto">💡 Dica</button>
+        </div>
+        <span class="dica-texto">Clique nas arestas para montar o tour você mesmo.</span>
+      </div>
+
+      <div class="legenda">
+        <span><i class="lg lg-base"></i>Não percorrida</span>
+        <span><i class="lg lg-trilha"></i>Percorrida</span>
+        <span><i class="lg lg-ok"></i>Candidata segura</span>
+        <span><i class="lg lg-ponte"></i>Ponte (evitada)</span>
+        <span><i class="lg lg-atual"></i>Vértice atual</span>
+      </div>
+    </section>
+
+    <!-- ===== Painéis laterais ===== -->
+    <aside class="lateral">
+      <section class="card">
+        <h2>Passo atual</h2>
+        <div id="explicacao" class="explicacao"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-titulo">
+          <h2>Tour de Euler</h2>
+          <span id="contador" class="contador">0/8 arestas</span>
+        </div>
+        <div id="tour" class="tour"></div>
+      </section>
+
+      <section class="card">
+        <h2>Graus restantes</h2>
+        <div id="graus" class="graus"></div>
+      </section>
+
+      <section class="card">
+        <h2>Histórico</h2>
+        <ol id="log" class="log"></ol>
+      </section>
+    </aside>
+  </main>
+
+  <!-- ===== Explicação teórica ===== -->
+  <section class="card como-funciona">
+    <h2>Como o algoritmo funciona</h2>
+    <div class="etapas">
+      <div class="etapa"><span>1</span><h3>Verifica os graus</h3>
+        <p>Se todos os vértices têm grau par existe um <b>circuito</b>; se exatamente dois são ímpares, existe um <b>caminho</b> (que começa num deles).</p></div>
+      <div class="etapa"><span>2</span><h3>Escolhe uma aresta</h3>
+        <p>No vértice atual, olha as arestas ainda não usadas e prefere uma que <b>não seja ponte</b>.</p></div>
+      <div class="etapa"><span>3</span><h3>Testa se é ponte</h3>
+        <p>Conta os vértices alcançáveis (DFS) antes e depois de remover a aresta. Se o número cair, é ponte.</p></div>
+      <div class="etapa"><span>4</span><h3>Percorre e remove</h3>
+        <p>Anda pela aresta, apaga-a do grafo e repete até não sobrar nenhuma aresta.</p></div>
+    </div>
+    <pre class="pseudo"><code>u ← vértice inicial
+enquanto grau(u) &gt; 0:
+    para cada vizinho v de u:
+        se (u,v) é a única aresta de u  ou  (u,v) não é ponte:
+            adiciona (u,v) ao tour
+            remove (u,v) do grafo
+            u ← v
+            pare</code></pre>
+  </section>
+
+  <footer class="rodape">Atalhos: <kbd>Espaço</kbd> tocar/pausar · <kbd>←</kbd> <kbd>→</kbd> passos · <kbd>R</kbd> reiniciar · <a href="estudo.html" style="color:#a78bfa">📖 Guia de estudo</a></footer>
+
+  <div id="toasts" class="toasts"></div>
+  <script src="script.js"></script>
+</body>
+</html>
